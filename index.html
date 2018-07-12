@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        .cl{
+            background-image: url(https://s3-us-west-2.amazonaws.com/quixel-megascans-static/megascans/home/Landing_Feature_EveryKind_2560.jpg);
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center center;
+            height: 300px;
+            width: 300px;
+        }
+
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body style="height: 100vh;">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<!--<img src="BOD_09.jpg" srcset="medium.jpg 1000w, large.jpg 2000w" alt="yah">-->
+<!-- total filesize is 35 933 bytes -->
+<!--<img data-src="./BOD_09.jpg" data-bytes="1024">-->
+<img data-bytes="120000" id="image" class="cl">
+<!--<img data-src="https://s3-us-west-2.amazonaws.com/quixel-megascans-static/megascans/home/Landing_Slideshow_01_Slide_C_5120.jpg" data-bytes="120000" style="max-width:100%; max-height: 100%">-->
+<!--<img data-src="http://shoepimper.com/doklist.com-logo.jpg" data-bytes="5600">-->
+
+<!--&lt;!&ndash; if data-bytes are erroneous the server will return the whole image &ndash;&gt;-->
+<!--<img data-src="http://shoepimper.com/doklist.com-logo.jpg" data-bytes="error">-->
+<!-- if CROS fails, then it falls back to set the data-src attribute to the src attribute -->
+<!--<img data-src="https://i.stack.imgur.com/QOPRf.jpg" data-bytes="error">-->
+<!--<img data-src="" id="imageid" alt="" style="max-width: 100%;max-height: 100%;">-->
+
+
+<script>
+
+  function sendRequest(index,url,callback){
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+      callback(index,xhr,callback);
+    };
+    xhr.open('GET', url , true);
+    xhr.setRequestHeader('Range','bytes='+stack[index].minBytes+'-'+stack[index].maxBytes); // the bytes (incl.) you request
+    xhr.setRequestHeader("Content-Type", "image/jpeg"); // the bytes (incl.) you request
+    xhr.responseType = "arraybuffer";
+    xhr.send(null);
+  }
+
+  document.deepCss= function(who, css){
+    if(!who || !who.style) return '';
+    var sty= css.replace(/\-([a-z])/g, function(a, b){
+      return b.toUpperCase();
+    });
+    if(who.currentStyle){
+      return who.style[sty] || who.currentStyle[sty] || '';
+    }
+    var dv= document.defaultView || window;
+    return who.style[sty] ||
+      dv.getComputedStyle(who,"").getPropertyValue(css) || '';
+  }
+
+  function getallBgimages(){
+    var url, B= [], A= document.getElementsByTagName('*');
+    A= B.slice.call(A, 0, A.length);
+    while(A.length){
+      var elem=A.shift();
+
+      url= document.deepCss(elem,'background-image');
+      if(url.indexOf('http')>-1) {
+        if (url) url = /url\(['"]?([^")]+)/.exec(url) || [];
+        url = url[1];
+        if (url && B.indexOf(url) == -1){ B[B.length] = {url:url,elem:elem};}
+      }
+    }
+    return B;
+  }
+
+  // for each img, which has data-src and data-bytes attributes
+
+  var stack=[];
+  var range = 120000;
+  var imagesWithBackground=getallBgimages();
+  var images = document.getElementsByTagName("img");
+
+  for(var i=0; i<images.length;i++){
+    var url = images[i].getAttribute("data-src");
+
+    var tempObj={
+      url : url,
+      elem : images[i],
+      data : [],
+      started : false,
+      loading : true,
+      range : range,
+      maxBytes : range,
+      minBytes : 0,
+      backgroundCss : false
+    }
+    stack.push(tempObj);
+
+  }
+
+  for(var i=0; i<imagesWithBackground.length;i++){
+
+    var tempObj={
+      url : imagesWithBackground[i].url,
+      elem : imagesWithBackground[i].elem,
+      data : [],
+      started : false,
+      loading : true,
+      range : range,
+      maxBytes : range,
+      minBytes : 0,
+      backgroundCss : true
+    }
+    stack.push(tempObj);
+
+  }
+
+  console.log(stack);
+
+  for(var j=0;j<stack.length;j++){
+
+    sendRequest(j,stack[j].url,function (index,xhr,callback) {
+      if (xhr.readyState === 4 && xhr.status === 206 && stack[index].loading) {
+        stack[index].minBytes = (stack[index].maxBytes + 1);
+        stack[index].maxBytes = stack[index].maxBytes + range;
+        stack[index].data += String.fromCharCode.apply(null, new Uint8Array(xhr.response));
+        if(stack[index].backgroundCss){
+          stack[index].elem.style.backgroundImage = 'url(data:image/jpeg;base64,' + btoa(stack[index].data)+')';
+        }
+        else {
+          stack[index].elem.src = 'data:image/jpeg;base64,' + btoa(stack[index].data);
+        }
+        sendRequest(index,stack[index].url,callback)
+      }
+      else if(xhr.status===416){
+        stack[index].loading = false;
+        return;
+      }
+      else{
+        stack[index].started=true;
+      }
+    });
+
+  }
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
